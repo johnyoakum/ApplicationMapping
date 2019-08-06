@@ -6,6 +6,8 @@ My goal is to build an interface that will be interactive that will make the pro
 
 I do want to say that I am a newbie when it comes to writing powershell scripts, and this was a work in the making. I know it could be worked up better, but it works well and it is only the beginning.
 
+Please see my blog posts on this at https://www.madduxconsulting.com/post/application-mapping-and-upgrade-workflows-part-1-of-3 and https://www.madduxconsulting.com/post/application-mapping-and-upgrade-workflows-part-2-of-3 and https://www.madduxconsulting.com/post/application-mapping-part-3-of-3
+
 Thanks.
 
 John
