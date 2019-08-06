@@ -20,7 +20,7 @@
 # e.g. C:\Scripts\GoogleApps
 $ScriptPathParent = split-path -Parent -Path $MyInvocation.MyCommand.Definition
 
-$Debug = $true
+$Debug = $false
 
 # Create Archive folder if it doesn't exist for this log file and for sending logs
 $TestPath = Test-Path -path c:\Archive
@@ -31,6 +31,7 @@ Else { $LogsDirectory = 'C:\Archive' }
 If (!$Debug) { $tsenv = New-Object -COMObject Microsoft.SMS.TSEnvironment }
 
 $InstalledApps = @()
+$TSVariable = 'UAAapps' #Set the base variable to be used in the task sequence.
 
 # Function to write to log file
 function Write-CMLogEntry {
@@ -121,7 +122,7 @@ If ( ($HasFirefox.DisplayName -like 'Mozilla Firefox *') -and ($HasFirefox -notl
 
 $MatchingApps += $ApplicationMapping | Where-Object { $AllInstalledApps.DisplayName -contains $_.DisplayName } | Get-Unique -AsString
 
-# Special Mappings for versioned apps
+# Special Mappings for versioned apps - if the application lists a version in the Installed programs, list it here... That way it can be mapped easier.
 $SpecialApplicationMapping = 'Mozilla Firefox * ESR *', 'Microsoft Office *', 'Audacity *', 'Google Chrome*', '7-Zip *', 'Evernote *', 'FileZilla*', 'FileOpen Client *', 'Adobe Shockwave Player *', `
     'Adobe Reader*', 'ArcGIS * for Desktop*', 'Camstudio*', 'Cisco Packet Tracer *', 'Firefox Developer *', 'Gephi *', 'GIMP*', 'HandBrake *', 'Inkscape *', 'KeePass*', 'Labstats*', `
     'LibreOffice *', 'Logger Pro *', 'Mendeley Desktop *', 'Microsoft SQL Server Management *', 'Mozilla Thunderbird *', 'NetLogo *', 'Octave*', 'OpenOffice*', `
@@ -129,6 +130,8 @@ $SpecialApplicationMapping = 'Mozilla Firefox * ESR *', 'Microsoft Office *', 'A
     'Wolfram CDF *', 'Wolfram Mathematica *', 'WolfVision *', 'Z+FLaserControl *', 'XShell *', 'Jave* Update *', 'Adobe Digital *', 'Adobe Flash Player * N*', 'Adobe Flash Player * P*', 'Adobe Flash Player* A*', `
     'Camtasia*', 'CloudCompare*', 'Corpscon*', 'Counterpointer*', 'gnuplot*', 'Google Earth*', 'ImageMagick *', 'Jave* Update *(*', 'Skype*', 'Graphical Analysis*', 'NetBeans IDE*', 'EndNote*', 'Git *', 'Focusky *', 'JetBrains PyCharm *', `
     'Nmap*', 'TortoiseGit*', 'TortoiseHg*', 'TortoiseSVN*', 'Symantec*'
+
+#Use the special applicaiton mapping to find all non-listed versioned apps in the CSV file for mapping
 ForEach ($SpecialApplication in $SpecialApplicationMapping) {
     $MatchingApps += Get-SpecialApplication -ApplicationToPass $SpecialApplication
 }
@@ -139,15 +142,16 @@ $MatchingApps = $MatchingApps | Sort-Object -Property DisplayName | Get-Unique -
 # Assign the Unique Apps to be installed to a specific variable
 $ApplicationsToInstall = $MatchingApps.NewApp | Get-Unique -AsString
 
+# Make sure that they are unique values... No point in installing the same applicaiton twice.
 $Apps = $ApplicationsToInstall |Sort-Object | Get-Unique -AsString
 
 #Reset initial count to 0
 $Count = 0
 
-# Section of code to set the task sequence value for the newly installed apps
+# Section of code to set the task sequence value for the newly installed apps - this adds all the mapped apps to a task sequence variable
 foreach ($ApplicationName in $Apps) {
     $Id = "{0:D2}" -f $Count
-    $AppId = "UAAapps$Id" 
+    $AppId = "$TSVariable$Id" 
     If (!$Debug) {$TSEnv.Value($AppId) = $ApplicationName}
     Write-CMLogEntry -Value "Task Sequence Variable Name: $AppID     -----   Application: $ApplicationName " -Severity 1
     $Count = $Count + 1
@@ -156,7 +160,7 @@ foreach ($ApplicationName in $Apps) {
 
 # Add additional Apps - Teams
 $Id = "{0:D2}" -f $Count
-$AppId = "UAAapps$Id" #You can make the base variable anything you would like as long as you reference it in the Install Application task sequence step
+$AppId = "$TSVariable$Id" #You can make the base variable anything you would like as long as you reference it in the Install Application task sequence step
 If (!$Debug) { $TSEnv.Value($AppId) = "Teams Machine-Wide Installer" }
 Write-CMLogEntry -Value "Task Sequence Variable Name: $AppID     -----   Application: Teams Machine-Wide Installer " -Severity 1
 # Uncomment out the following line if you continue to adding additional apps for dynamic installation 
@@ -165,7 +169,7 @@ Write-CMLogEntry -Value "Task Sequence Variable Name: $AppID     -----   Applica
 <# Use the following section to continue to add additional apps that were not included through the process above
 # Add additional Apps - OneDrive
 $Id = "{0:D2}" -f $Count
-$AppId = "UAAapps$Id"
+$AppId = "$TSVariable$Id"
 If (!$Debug) { $TSEnv.Value($AppId) = "Microsoft OneDrive for Business Client" }
 Write-CMLogEntry -Value "Task Sequence Variable Name: $AppID     -----   Application: Teams Machine-Wide Installer " -Severity 1
 $Count = $Count + 1
